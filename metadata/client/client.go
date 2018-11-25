@@ -6,7 +6,7 @@ import (
 	"log"
 	"strconv"
 
-	pb "github.com/smallnest/grpc-examples/metatdata/pb"
+	pb "github.com/smallnest/grpc-examples/metadata/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -30,7 +30,7 @@ func main() {
 
 	//unary
 	md := metadata.Pairs("X-metadata-key1", "metadata-value1")
-	ctx := metadata.NewContext(context.Background(), md)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	log.Printf("unary send MD: %+v", md)
 
 	var header, trailer metadata.MD
@@ -44,7 +44,8 @@ func main() {
 
 	//streaming
 	md = metadata.Pairs("X-metadata-key2", "metadata-value2")
-	ctx = metadata.NewContext(context.Background(), md)
+	ctx = metadata.NewOutgoingContext(context.Background(), md)
+
 	log.Printf("streaming send MD: %+v", md)
 
 	stream, err := c.SayHello1(ctx)

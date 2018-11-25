@@ -20,6 +20,7 @@ var (
 
 type server struct{}
 
+// rpc SayHello1 (HelloRequest) returns (stream HelloReply) {}
 func (s *server) SayHello1(in *pb.HelloRequest, gs pb.Greeter_SayHello1Server) error {
 	name := in.Name
 
@@ -28,6 +29,8 @@ func (s *server) SayHello1(in *pb.HelloRequest, gs pb.Greeter_SayHello1Server) e
 	}
 	return nil
 }
+
+// rpc SayHello2 (stream HelloRequest) returns (HelloReply) {}
 func (s *server) SayHello2(gs pb.Greeter_SayHello2Server) error {
 	var names []string
 
@@ -46,6 +49,8 @@ func (s *server) SayHello2(gs pb.Greeter_SayHello2Server) error {
 
 	return nil
 }
+
+// rpc SayHello3 (stream HelloRequest) returns (stream HelloReply) {}
 func (s *server) SayHello3(gs pb.Greeter_SayHello3Server) error {
 	for {
 		in, err := gs.Recv()
@@ -57,6 +62,7 @@ func (s *server) SayHello3(gs pb.Greeter_SayHello3Server) error {
 			return err
 		}
 
+		// stream
 		gs.Send(&pb.HelloReply{Message: "Hello " + in.Name})
 	}
 
