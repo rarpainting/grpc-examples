@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"io"
 	"io/ioutil"
 	"log"
@@ -19,9 +20,11 @@ import (
 )
 
 var (
-	port     = flag.String("p", ":8972", "port")
-	certFile = "./config/tls-config/localhost/cert.pem"
-	keyFile  = "./config/tls-config/localhost/key.pem"
+	port = flag.String("p", ":8972", "port")
+
+	rootFile = "./config/tls-config/ca/myssl/myssl_root.cer"
+	certFile = "./config/tls-config/localhost/server/cert.pem"
+	keyFile  = "./config/tls-config/localhost/server/key.pem"
 )
 
 type perrpccred struct{}
@@ -71,12 +74,27 @@ func (s *server) SayHello1(gs pb.Greeter_SayHello1Server) error {
 
 func main() {
 	flag.Parse()
+	log.SetFlags(log.Llongfile)
+
+	// 将 根证书 放进证书池
+	rootBuf, err := ioutil.ReadFile(rootFile)
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM(rootBuf); !ok {
+		log.Fatalln("failed to append test CA")
+	}
 
 	lis, err := net.Listen("tcp", *port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer(grpc.Creds(credentials.NewTLS(getTLSConfig(certFile, keyFile))))
+
+	tlsConfig := getTLSConfig(certFile, keyFile)
+	tlsConfig.ClientCAs = certPool
+	s := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)))
 	pb.RegisterGreeterServer(s, &server{})
 
 	reflection.Register(s)

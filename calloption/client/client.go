@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"google.golang.org/grpc/credentials"
 	"io/ioutil"
@@ -14,10 +15,12 @@ import (
 )
 
 var (
-	address  = flag.String("addr", "localhost:8972", "address")
-	name     = flag.String("n", "world", "name")
-	certFile = "./config/tls-config/localhost/cert.pem"
-	keyFile  = "./config/tls-config/localhost/key.pem"
+	address = flag.String("addr", "localhost:8972", "address")
+	name    = flag.String("n", "world", "name")
+
+	rootFile = "./config/tls-config/ca/myssl/myssl_root.cer"
+	certFile = "./config/tls-config/localhost/client/cert.pem"
+	keyFile  = "./config/tls-config/localhost/client/key.pem"
 )
 
 type perrpccred struct{}
@@ -40,9 +43,23 @@ func (ai *authInfo) AuthType() string {
 
 func main() {
 	flag.Parse()
+	log.SetFlags(log.Llongfile)
 
+	// 将 根证书 放进证书池
+	rootBuf, err := ioutil.ReadFile(rootFile)
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM(rootBuf); !ok {
+		log.Fatalln("failed to append test CA")
+	}
+
+	tlsConfig := getTLSConfig(certFile, keyFile)
+	tlsConfig.RootCAs = certPool
 	// 连接服务器
-	conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(credentials.NewTLS(getTLSConfig(certFile, keyFile))))
+	conn, err := grpc.Dial(*address, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	if err != nil {
 		log.Fatalf("faild to connect: %v", err)
 	}
